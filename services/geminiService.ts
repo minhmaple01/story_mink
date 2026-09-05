@@ -47,7 +47,7 @@ export const getPromptCountForDuration = (seconds: number): number => {
 };
 
 const get3DStyleDescription = (
-  subStyle: Doc3DSubStyle = '', 
+  subStyle: Doc3DSubStyle = 'mink_psychology', 
   theme: Doc3DRenderTheme = 'clay_white',
   customStylePrompt?: string
 ): string => {
@@ -78,7 +78,7 @@ const get3DStyleDescription = (
 
 const getSystemPrompt = (
   duration: number,
-  subStyle: Doc3DSubStyle = '',
+  subStyle: Doc3DSubStyle = 'mink_psychology',
   theme: Doc3DRenderTheme = 'clay_white',
   includeCharactersPresent: boolean = false,
   includeCharactersAbsent: boolean = false,
@@ -96,7 +96,7 @@ const getSystemPrompt = (
   const isMink = subStyle === 'mink_psychology' || (customStylePrompt && customStylePrompt.includes('@mink'));
   const isPart1 = (chunkIndex === 0);
   const isPart3OrLater = (chunkIndex !== undefined && chunkIndex >= 2);
-  const use6to14 = isFlexibleGrid && allowLongerPacingFromPart3 && isPart3OrLater;
+  const use8to14 = isFlexibleGrid && allowLongerPacingFromPart3 && isPart3OrLater;
   const usePart1ShortScenes = isFlexibleGrid && allowLongerPacingFromPart3 && boostShortScenesPart1 && isPart1;
 
   let parsedFormat: any = isMink ? {
@@ -180,25 +180,25 @@ In the "motion" field, describe the visual dynamics in clear chronological progr
 
   const formatInstructions = JSON.stringify(parsedFormat, null, 2);
 
-  const step1Instructions = use6to14 ? `
+  const step1Instructions = use8to14 ? `
 ==================================================
-STEP 1: DYNAMIC 6s TO 14s FLEXIBLE TIME GRID (ÁP DỤNG CHO TỪ PHẦN 3 TRỞ ĐI - TỐI THIỂU 6s, TỐI ĐA 14s) & STRICT SUBTITLE SYNCHRONIZATION (CRITICAL)
+STEP 1: DYNAMIC 8s TO 14s FLEXIBLE TIME GRID (ÁP DỤNG CHO TỪ PHẦN 3 TRỞ ĐI - TỐI THIỂU 8s, TỐI ĐA 14s) & STRICT SUBTITLE SYNCHRONIZATION (CRITICAL)
 
 1.  **STRICT SUBTITLE SYNCHRONIZATION (CHỐNG LỆCH HÌNH VỚI LỜI THOẠI):**
     *   **Direct Visual Depiction:** The generated visual storyboard for every segment MUST depict exactly what is being spoken in the subtitle lines during that time span.
     *   **"voiceover_context":** MUST contain the exact original subtitle sentences corresponding to this specific segment's time range.
     *   **"story_action" & "elements":** MUST directly illustrate the specific subject, location, structure, action, or metrics spoken in that "voiceover_context". DO NOT show unrelated generic objects or scenes from future/past dialogue.
 
-2.  **Flexible 6.0s - 14.0s Duration (TỐI THIỂU 6 GIÂY, CHO PHÉP ĐẾN 14 GIÂY CHO TỪ PHẦN 3 TRỞ ĐI):**
-    *   **THẤP NHẤT LÀ 6 GIÂY (MINIMUM 6.0 SECONDS):** TUYỆT ĐỐI KHÔNG tạo bất kỳ cảnh nào dưới 6.0 giây trong phần này. Nếu câu phụ đề ngắn (< 6s), bạn BẮT BUỘC phải gộp các câu phụ đề kế tiếp lại để đạt thời lượng từ 6.0s đến 14.0s.
-    *   **CHO PHÉP CẢNH DÀI ĐẾN 14 GIÂY (MAXIMUM 14.0 SECONDS):** Thời lượng mỗi cảnh nằm trong khoảng **6.0 đến 14.0 giây** (ví dụ: 6s, 6.5s, 7s, 7.5s, 8s, 9s, 10s, 11s, 12s, 13s, 14s) giúp khung hình có độ lắng sâu, camera di chuyển trầm tĩnh và mô tả trọn vẹn bối cảnh không gian/tâm lý.
+2.  **Flexible 8.0s - 14.0s Duration (TỐI THIỂU 8 GIÂY, CHO PHÉP ĐẾN 14 GIÂY CHO TỪ PHẦN 3 TRỞ ĐI):**
+    *   **THẤP NHẤT LÀ 8 GIÂY (MINIMUM 8.0 SECONDS):** TUYỆT ĐỐI KHÔNG tạo bất kỳ cảnh nào dưới 8.0 giây trong phần này. Nếu câu phụ đề ngắn (< 8s), bạn BẮT BUỘC phải gộp các câu phụ đề kế tiếp lại để đạt thời lượng từ 8.0s đến 14.0s.
+    *   **CHO PHÉP CẢNH DÀI ĐẾN 14 GIÂY (MAXIMUM 14.0 SECONDS):** Thời lượng mỗi cảnh nằm trong khoảng **8.0 đến 14.0 giây** (ví dụ: 8s, 8.5s, 9s, 9.5s, 10s, 11s, 12s, 13s, 14s) giúp khung hình có độ lắng sâu, camera di chuyển trầm tĩnh và mô tả trọn vẹn bối cảnh không gian/tâm lý.
     *   Căn chỉnh mốc thời gian:
-        *   Nếu một câu hoặc cụm câu phụ đề gộp lại dài 6s - 14s (ví dụ: 7s, 8.5s, 10s, 12s, 14s): tạo 1 cảnh trọn vẹn duy nhất cho khoảng thời gian đó.
-        *   Nếu một đoạn thoại dài vượt quá 14s: chia thành các Part liên tiếp từ 6s đến 14s (ví dụ: Part 1 dài 7s, Part 2 dài 8s).
+        *   Nếu một câu hoặc cụm câu phụ đề gộp lại dài 8s - 14s (ví dụ: 8s, 9s, 10s, 12s, 14s): tạo 1 cảnh trọn vẹn duy nhất cho khoảng thời gian đó.
+        *   Nếu một đoạn thoại dài vượt quá 14s: chia thành các Part liên tiếp từ 8s đến 14s (ví dụ: Part 1 dài 8s, Part 2 dài 8s).
 
 3.  **CLEAN TIME HEADER & NO DURATION TAGS IN PROMPT (STRICT):**
     *   Sử dụng Time Header chuẩn: ví dụ \`**[02:15 - 02:23]**\` hoặc \`**[02:23 - 02:37]**\`.
-    *   **DO NOT ADD ANY DURATION TAGS** (như <6>, <14>, <7.5>) vào header, prompt text, hay trường JSON.
+    *   **DO NOT ADD ANY DURATION TAGS** (như <8>, <14>, <10>) vào header, prompt text, hay trường JSON.
     *   Include \`"part": 1, 2, 3...\` in the JSON object.
 
 4.  **Contiguous Timeline:** Ensure each scene advances the timeline contiguously (no time gaps, no overlaps).
@@ -232,8 +232,8 @@ STEP 1: DYNAMIC 4s TO 9s FLEXIBLE TIME GRID & STRICT SUBTITLE-TO-VISUAL SYNCHRON
     *   **"voiceover_context":** MUST contain the exact original subtitle sentences corresponding to this specific segment's time range.
     *   **"story_action" & "elements":** MUST directly illustrate the specific subject, location, structure, action, or metrics spoken in that "voiceover_context". DO NOT show unrelated generic objects or scenes from future/past dialogue.
 
-2.  **Flexible 4.0s - 9.0s Duration Tailored to Subtitle Sentences${allowLongerPacingFromPart3 ? (chunkIndex === 1 ? ' (PHẦN 2: CHUYỂN TIẾP 4s - 8s CHUẨN BỊ CHO LƯỚI 6s - 14s TỪ PHẦN 3)' : ' (PHẦN 1 & 2: NHỊP ĐỘ MỞ ĐẦU 4s - 9s)') : ''}:**
-    *   Each scene's duration MUST be in the range of **4.0 to 9.0 seconds** (e.g., 4s, 4.5s, 5s, 5.5s, 6s, 6.5s, 7s, 7.5s, 8s, 8.5s, 9s).${allowLongerPacingFromPart3 ? '\n    *   (Ghi chú: Lưới mở rộng 6s - 14s sẽ tự động áp dụng từ Phần 3 trở đi).' : ''}
+2.  **Flexible 4.0s - 9.0s Duration Tailored to Subtitle Sentences${allowLongerPacingFromPart3 ? (chunkIndex === 1 ? ' (PHẦN 2: CHUYỂN TIẾP 4s - 8s CHUẨN BỊ CHO LƯỚI 8s - 14s TỪ PHẦN 3)' : ' (PHẦN 1 & 2: NHỊP ĐỘ MỞ ĐẦU 4s - 9s)') : ''}:**
+    *   Each scene's duration MUST be in the range of **4.0 to 9.0 seconds** (e.g., 4s, 4.5s, 5s, 5.5s, 6s, 6.5s, 7s, 7.5s, 8s, 8.5s, 9s).${allowLongerPacingFromPart3 ? '\n    *   (Ghi chú: Lưới mở rộng 8s - 14s sẽ tự động áp dụng từ Phần 3 trở đi).' : ''}
     *   Align scene timestamps with natural subtitle boundaries, sentences, or natural speech pauses:
         *   If a subtitle sentence is 4.5s long: create a scene of exactly 4.5s (e.g. \`**[00:00 - 00:04.5]**\`).
         *   If a subtitle sentence is 5.5s or 6s: create a scene with duration 5.5s or 6s (e.g. \`**[00:00 - 00:05.5]**\` or \`**[00:00 - 00:06]**\`).
@@ -513,7 +513,7 @@ export const generateStoryboardChunk = async (
   characterImage?: { data: string, mimeType: string } | null,
   previousContext?: ChunkContext | null,
   realEndTime?: string,
-  subStyle: Doc3DSubStyle = '',
+  subStyle: Doc3DSubStyle = 'mink_psychology',
   theme: Doc3DRenderTheme = 'clay_white',
   isFirstChunk: boolean = false,
   segmentMode: SegmentMode = 'dynamic_grid_4_9',
@@ -535,7 +535,7 @@ export const generateStoryboardChunk = async (
   const isFlexibleGrid = segmentMode === 'dynamic_grid_4_9' || segmentMode === 'dynamic_grid_468';
   const isPart1 = (chunkIndex === 0);
   const isPart3OrLater = (chunkIndex !== undefined && chunkIndex >= 2);
-  const use6to14 = isFlexibleGrid && allowLongerPacingFromPart3 && isPart3OrLater;
+  const use8to14 = isFlexibleGrid && allowLongerPacingFromPart3 && isPart3OrLater;
   const usePart1ShortScenes = isFlexibleGrid && allowLongerPacingFromPart3 && boostShortScenesPart1 && isPart1;
   
   let prompt = `TARGET GRID RANGE: ${timeLabel}\n\nINPUT SUBTITLES:\n${srtChunkContent}\n\n`;
@@ -584,11 +584,11 @@ export const generateStoryboardChunk = async (
   }
 
   if (isFlexibleGrid) {
-    if (use6to14) {
-      prompt += `INSTRUCTION: DYNAMIC 6s TO 14s FLEXIBLE TIME GRID (ÁP DỤNG CHO PHẦN ${(chunkIndex || 0) + 1} - TỪ PHẦN 3 TRỞ ĐI) & STRICT SUBTITLE SYNCHRONIZATION IS ACTIVE.\n`;
-      prompt += `*** YÊU CẦU THỜI LƯỢNG: TỐI THIỂU 6s, CHO PHÉP ĐẾN 14s ***\n`;
-      prompt += `1. THẤP NHẤT LÀ 6 GIÂY: Tuyệt đối không tạo cảnh ngắn dưới 6.0 giây trong phần này. Gộp các câu phụ đề ngắn liền kề để đạt thời lượng từ 6.0s đến 14.0s.\n`;
-      prompt += `2. CẢNH KÉO DÀI ĐẾN 14 GIÂY: Cho phép các cảnh kéo dài 6.0s - 14.0s (ví dụ: 6s, 6.5s, 7s, 7.5s, 8s, 9s, 10s, 11s, 12s, 13s, 14s) giúp diễn đạt chiều sâu bối cảnh và camera di chuyển trầm tĩnh.\n`;
+    if (use8to14) {
+      prompt += `INSTRUCTION: DYNAMIC 8s TO 14s FLEXIBLE TIME GRID (ÁP DỤNG CHO PHẦN ${(chunkIndex || 0) + 1} - TỪ PHẦN 3 TRỞ ĐI) & STRICT SUBTITLE SYNCHRONIZATION IS ACTIVE.\n`;
+      prompt += `*** YÊU CẦU THỜI LƯỢNG: TỐI THIỂU 8s, CHO PHÉP ĐẾN 14s ***\n`;
+      prompt += `1. THẤP NHẤT LÀ 8 GIÂY: Tuyệt đối không tạo cảnh ngắn dưới 8.0 giây trong phần này. Gộp các câu phụ đề ngắn liền kề để đạt thời lượng từ 8.0s đến 14.0s.\n`;
+      prompt += `2. CẢNH KÉO DÀI ĐẾN 14 GIÂY: Cho phép các cảnh kéo dài 8.0s - 14.0s (ví dụ: 8s, 8.5s, 9s, 9.5s, 10s, 11s, 12s, 13s, 14s) giúp diễn đạt chiều sâu bối cảnh và camera di chuyển trầm tĩnh.\n`;
       prompt += `3. Visual content MUST faithfully and directly illustrate what is being spoken in the subtitle lines for that specific segment.\n`;
       prompt += `4. Fill "voiceover_context" with the EXACT subtitle text spoken in this time window. Do NOT hallucinate content from other parts of the script.\n`;
       prompt += `5. Time Header format: **[02:15 - 02:23]** (clean time header, strictly DO NOT add duration tags in the header or prompt). In JSON include "part": 1, 2...\n`;
@@ -608,9 +608,9 @@ export const generateStoryboardChunk = async (
       prompt += `INSTRUCTION: DYNAMIC 4s TO 9s FLEXIBLE TIME GRID & STRICT SUBTITLE-TO-VISUAL SYNCHRONIZATION IS ACTIVE.\n`;
       if (allowLongerPacingFromPart3) {
         if (chunkIndex === 1) {
-          prompt += `*** PACING CHO PHẦN 2: GIAI ĐOẠN CHUYỂN TIẾP NHỊP ĐỘ (4s - 8s) CHUẨN BỊ BƯỚC VÀO LƯỚI SÂU LẮNG 6s - 14s TỪ PHẦN 3 ***\n`;
+          prompt += `*** PACING CHO PHẦN 2: GIAI ĐOẠN CHUYỂN TIẾP NHỊP ĐỘ (4s - 8s) CHUẨN BỊ BƯỚC VÀO LƯỚI SÂU LẮNG 8s - 14s TỪ PHẦN 3 ***\n`;
         } else if (chunkIndex !== undefined && chunkIndex < 2) {
-          prompt += `*** PACING CHO PHẦN ${chunkIndex + 1}: GIỮ NHỊP MỞ ĐẦU 4s - 9s ĐỂ CUỐN HÚT NGƯỜI XEM (LƯỚI MỞ RỘNG 6s - 14s SẼ ÁP DỤNG TỪ PHẦN 3) ***\n`;
+          prompt += `*** PACING CHO PHẦN ${chunkIndex + 1}: GIỮ NHỊP MỞ ĐẦU 4s - 9s ĐỂ CUỐN HÚT NGƯỜI XEM (LƯỚI MỞ RỘNG 8s - 14s SẼ ÁP DỤNG TỪ PHẦN 3) ***\n`;
         }
       }
       prompt += `*** CHỐNG LỆCH HÌNH ẢNH SO VỚI LỜI THOẠI (CRITICAL REQUIREMENT) ***\n`;

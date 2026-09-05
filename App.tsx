@@ -120,7 +120,7 @@ const App: React.FC = () => {
   
   // 3D Specific Settings
   const [availableStyles, setAvailableStyles] = useState<VisualStyle[]>(() => getStoredStyles());
-  const [subStyle, setSubStyle] = useState<Doc3DSubStyle>('');
+  const [subStyle, setSubStyle] = useState<Doc3DSubStyle>('mink_psychology');
   const [isStyleModalOpen, setIsStyleModalOpen] = useState<boolean>(false);
   const [editingStyle, setEditingStyle] = useState<VisualStyle | null>(null);
   const [renderTheme, setRenderTheme] = useState<Doc3DRenderTheme>('auto_dynamic');
@@ -160,7 +160,7 @@ const App: React.FC = () => {
   };
 
   // Dropdown / Collapsible Expand States
-  const [isStyleExpanded, setIsStyleExpanded] = useState<boolean>(true);
+  const [isStyleExpanded, setIsStyleExpanded] = useState<boolean>(false);
   const [isThemeExpanded, setIsThemeExpanded] = useState<boolean>(false);
   const [isModeExpanded, setIsModeExpanded] = useState<boolean>(false);
   
@@ -352,7 +352,7 @@ const App: React.FC = () => {
           } else if (chunk.id === 1) {
             avgSec = 6.0;
           } else if (chunk.id >= 2) {
-            avgSec = 9.5;
+            avgSec = 11.0;
           }
         }
         total += Math.max(1, Math.round(totalSec / avgSec));
@@ -543,7 +543,7 @@ const App: React.FC = () => {
       let expectedSegments = 1;
       if (segmentMode === 'dynamic_grid_4_9' || segmentMode === 'dynamic_grid_468') {
         const totalChunkSec = Math.max(1, timestampToSeconds(endTimeToUse) - timestampToSeconds(chunk.gridStart));
-        // In flexible 4-9s mode (or 6-14s from Part 3 onwards, or boost short scenes in Part 1), minimum acceptable segment count is based on max step
+        // In flexible 4-9s mode (or 8-14s from Part 3 onwards, or boost short scenes in Part 1), minimum acceptable segment count is based on max step
         const maxStepSec = (allowLongerPacingFromPart3 && chunk.id >= 2) 
           ? 14.5 
           : (allowLongerPacingFromPart3 && chunk.id === 0 && boostShortScenesPart1) 
@@ -1199,7 +1199,7 @@ const App: React.FC = () => {
                         {(segmentMode === 'dynamic_grid_4_9' || segmentMode === 'dynamic_grid_468') && (
                           allowLongerPacingFromPart3 ? (
                             <span className="text-[9px] font-bold bg-violet-100 text-violet-800 px-1.5 py-0.5 rounded border border-violet-200">
-                              {boostShortScenesPart1 ? 'P1: 3.5-6s • P2: 4-8s • P3+: 6-14s' : 'Phần 1-2: 4-9s • Từ Phần 3: 6-14s'}
+                              {boostShortScenesPart1 ? 'P1: 3.5-6s • P2: 4-8s • P3+: 8-14s' : 'Phần 1-2: 4-9s • Từ Phần 3: 8-14s'}
                             </span>
                           ) : (
                             <div className="flex items-center gap-1">
@@ -1219,8 +1219,8 @@ const App: React.FC = () => {
                       {(segmentMode === 'dynamic_grid_4_9' || segmentMode === 'dynamic_grid_468') && (
                         allowLongerPacingFromPart3
                           ? (boostShortScenesPart1
-                              ? 'Phần 1 tăng cường nhiều cảnh ngắn (3.5s - 6s) hook giữ chân khán giả; Phần 2 chuyển tiếp 4s - 8s; Từ Phần 3 trở đi: 6s - 14s có độ lắng sâu sắc.'
-                              : 'Phần 1 & 2 giữ nhịp 4s - 9s. Từ Phần 3 trở đi: 6s - 14s (thấp nhất 6s, cho phép cảnh 14s). Khớp lời thoại 100%, prompt sạch không kèm thẻ.')
+                              ? 'Phần 1 tăng cường nhiều cảnh ngắn (3.5s - 6s) hook giữ chân khán giả; Phần 2 chuyển tiếp 4s - 8s; Từ Phần 3 trở đi: 8s - 14s có độ lắng sâu sắc.'
+                              : 'Phần 1 & 2 giữ nhịp 4s - 9s. Từ Phần 3 trở đi: 8s - 14s (thấp nhất 8s, cho phép cảnh 14s). Khớp lời thoại 100%, prompt sạch không kèm thẻ.')
                           : 'Thời lượng linh hoạt 4s - 9s (4.5s, 5.5s, 6.5s, 7s, 7.5s, 8.5s, 9s...) bám sát từng câu phụ đề; hình ảnh mô tả chuẩn xác nội dung lời thoại; prompt sạch không kèm thẻ.'
                       )}
                       {segmentMode === 'multi_prompt_line' && '≤6s: 1 prompt, ≤12s: 2 prompt... Tự động phân đoạn theo độ dài sub.'}
@@ -1347,7 +1347,7 @@ const App: React.FC = () => {
                   </div>
                 )}
 
-                {/* Sub-option for Flexible Grid: 6-14s pacing from Part 3 onwards */}
+                {/* Sub-option for Flexible Grid: 8-14s pacing from Part 3 onwards */}
                 {(segmentMode === 'dynamic_grid_4_9' || segmentMode === 'dynamic_grid_468') && (
                   <div className="mt-2.5 pt-2.5 border-t border-slate-100 flex flex-col gap-2">
                     <label className="flex items-start gap-2.5 cursor-pointer select-none group bg-slate-50/90 hover:bg-slate-100/90 border border-slate-200 rounded-lg p-2.5 transition-all">
@@ -1361,14 +1361,14 @@ const App: React.FC = () => {
                       <div className="flex flex-col flex-1">
                         <div className="flex items-center justify-between gap-1.5 flex-wrap">
                           <span className="text-xs font-bold text-slate-800 group-hover:text-cyan-700 transition-colors">
-                            Thêm cảnh 14s & tối thiểu 6s (Từ Phần 3 trở đi)
+                            Thêm cảnh 14s & tối thiểu 8s (Từ Phần 3 trở đi)
                           </span>
                           <span className="text-[9px] font-bold bg-violet-100 text-violet-800 px-1.5 py-0.2 rounded border border-violet-200">
                             Từ Phần 3
                           </span>
                         </div>
                         <span className="text-[10px] text-slate-500 leading-snug mt-1">
-                          Phần 1 & 2 giữ nhịp 4s - 9s. Từ <strong>Phần 3 trở đi</strong>, thời lượng mỗi cảnh mở rộng thành <strong>6s đến 14s</strong> (thấp nhất 6s, cho phép cảnh 14s) giúp khung hình có độ lắng, góc quay điềm đạm và diễn giải bối cảnh sâu sắc hơn.
+                          Phần 1 & 2 giữ nhịp 4s - 9s. Từ <strong>Phần 3 trở đi</strong>, thời lượng mỗi cảnh mở rộng thành <strong>8s đến 14s</strong> (thấp nhất 8s, cho phép cảnh 14s) giúp khung hình có độ lắng, góc quay điềm đạm và diễn giải bối cảnh sâu sắc hơn.
                         </span>
                       </div>
                     </label>
@@ -1669,7 +1669,7 @@ const App: React.FC = () => {
                                 </span>
                               ) : chunk.id >= 2 ? (
                                 <span className="text-[9px] font-bold bg-violet-100 text-violet-800 px-1.5 py-0.2 rounded border border-violet-200">
-                                  Lưới 6s - 14s
+                                  Lưới 8s - 14s
                                 </span>
                               ) : (
                                 <span className="text-[9px] font-medium bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded border border-slate-200">
