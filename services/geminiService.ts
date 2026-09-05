@@ -123,12 +123,12 @@ const getSystemPrompt = (
 
   let parsedFormat: any = isMink ? {
     voiceover_context: "Use the EXACT original subtitle text spoken during this scene's time window. DO NOT TRANSLATE or summarize.",
-    image_prompt: "@mink, [Camera angle & slice-of-life action reflecting the psychology], straight unsmiling neutral deadpan mouth, indifferent blank gaze, [Setting & props], [Lighting & warm color], Korean slice-of-life 2D webtoon art style, clean crisp black outlines, minimal flat cel-shading, warm muted pastel tones, cinematic composition, textless --ar 16:9",
-    story_action: "Slice-of-life visual action of Mink with deadpan expression that metaphorically reflects the psychological reflection in this subtitle line",
+    image_prompt: "@mink, [Candid slice-of-life action & diverse hand interaction: holding steaming mug with both hands, pouring coffee, turning book page, resting chin on palm, lounging on sofa, carrying tote bag], [Camera angle & looking-away gaze: side profile gazing out window, looking down thoughtfully, rear view walking at sunset, over-the-shoulder], straight unsmiling neutral deadpan mouth, calm unbothered expression, [Setting & props], [Lighting & warm color], Korean slice-of-life 2D webtoon art style, clean crisp black outlines, minimal flat cel-shading, warm muted pastel tones, cinematic composition, textless --ar 16:9",
+    story_action: "Slice-of-life visual action of Mink with deadpan expression that metaphorically reflects the psychological reflection in this subtitle line, with natural hand movement and candid gaze",
     background: "Cozy minimalist interior, sunlit window, quiet suburban sidewalk at sunset, late night wooden desk, or rain-streaked subway car",
-    composition: "Wide cinematic shot OR Medium shot OR Side profile, eye-level, balanced negative space",
+    composition: "Side profile OR 3/4 angle OR Rear view OR Wide candid cinematic shot, looking away from camera, eye-level, balanced negative space",
     color: "Warm muted earth tones, soft golden hour sunbeams, cozy interior lamp glow, minimal flat cel-shading palette",
-    constraints: "Korean slice-of-life 2D webtoon art style, clean crisp black outlines, straight unsmiling deadpan mouth, unbothered calm gaze, oversized charcoal dark grey crewneck sweatshirt with small red heart logo on left chest, loose dark trousers, textless, strictly NO text, NO words, NO letters, NO numbers, pure illustration"
+    constraints: "Korean slice-of-life 2D webtoon art style, clean crisp black outlines, straight unsmiling deadpan mouth, candid gaze looking away from camera (NOT staring at lens), active natural hand postures (AVOID repetitive hands in pockets), oversized charcoal dark grey crewneck sweatshirt with small red heart logo on left chest, loose dark trousers, textless, strictly NO text, NO words, NO letters, NO numbers, pure illustration"
   } : {
     voiceover_context: "Use the EXACT original subtitle text spoken during this scene's time window. DO NOT TRANSLATE or summarize.",
     image_prompt: "Complete prompt ready to copy directly into image generation tools (Midjourney / Flux / Imagen), describing subject, action, environment, lighting, artistic style, textless --ar 16:9",
@@ -298,20 +298,37 @@ STEP 1: FIXED TIME GRID SEGMENTATION
 •   **Biểu cảm nhân vật (KHÓA CHẶT):**
     "straight unsmiling neutral deadpan mouth, flat blank expression, unbothered calm gaze, zero smile"
     *TUYỆT ĐỐI CẤM:* Không bao giờ dùng smiling, happy, cheerful, grinning, laughing, crying, frowning, screaming hay biểu cảm kịch tính. Nhân vật Mink luôn giữ thái độ điềm tĩnh, thản nhiên, vô ưu (nonchalant, indifferent, unbothered, calm) trước mọi hoàn cảnh và biến cố.
-•   **Nhận diện trang phục:**
+•   **QUY TẮC CHỐNG LẶP HƯỚNG NHÌN (CỰC KỲ QUAN TRỌNG - ANTI-CAMERA-STARE RULE):**
+    *TUYỆT ĐỐI KHÔNG để Mink lúc nào cũng nhìn chằm chằm vào ống kính camera ("looking at viewer / looking at camera")*. Mink là nhân vật trong cuộc sống đời thường chân thực (candid documentary slice-of-life). Hầu hết (80-90%) phân cảnh Mink PHẢI nhìn đi hướng khác:
+    - **Góc nghiêng nhìn ra ngoài cửa sổ:** "candid side profile, gazing pensively out the rain-streaked window at city lights".
+    - **Nhìn xuống đồ vật/sách:** "looking down thoughtfully at a steaming ceramic mug held in hands", "looking down at an open book or notebook on the wooden desk".
+    - **Nhìn lên bầu trời/khoảng không:** "three-quarter angle, looking up calmly at the twilight sunset clouds or streetlights".
+    - **Góc nhìn sau lưng / Qua vai:** "cinematic rear view / back view, walking alone along quiet pavement", "over-the-shoulder view observing the busy intersection from a quiet coffee shop corner".
+    - **Chỉ dùng nhìn trực diện tối đa 1 lần** khi thực sự cần tạo điểm nhấn đăm chiêu (nhưng vẫn giữ ánh mắt nhìn xuyên qua khoảng không, không tạo dáng như chụp hình).
+
+•   **QUY TẮC CHỐNG LẶP TƯ THẾ TAY (ANTI-HANDS-IN-POCKETS RULE):**
+    *CẤM lạm dụng tư thế "đút hai tay vào túi quần" (hands in pockets)* trong nhiều cảnh liên tiếp! Phải tạo cho đôi tay và cơ thể của Mink sự tương tác tự nhiên, phong phú với bối cảnh:
+    - **Hai tay cầm/ôm tách nước ấm:** "holding a warm ceramic mug with both hands, enjoying rising steam".
+    - **Pha chế / Nấu nướng / Ăn uống:** "holding a slender gooseneck kettle pouring hot water over a coffee dripper", "holding wooden chopsticks eating a bowl of warm noodles alone at a cozy wooden counter".
+    - **Đọc sách / Viết lách / Nghe nhạc:** "fingers gently turning a page of a paperback book under vintage lamp", "adjusting over-ear headphones resting around neck".
+    - **Chống cằm suy ngẫm:** "resting chin casually on one palm / closed fist at the table, gaze wandering sideways".
+    - **Thư giãn & Thả lỏng toàn thân:** "lounging stretched out on a soft fabric couch with legs relaxed, arms resting comfortably on cushions", "sitting cross-legged on the wooden floor with a sketchbook".
+    - **Mang xách đồ vật:** "carrying a canvas tote bag on shoulder", "holding a simple transparent umbrella while walking in drizzle".
+
+•   **Nhận diện trang phục cố định:**
     "oversized charcoal dark grey crewneck sweatshirt with a small red heart logo on left chest, loose dark trousers".
 •   **Phong cách đồ họa:**
     "Korean slice-of-life 2D webtoon art style, clean crisp black line art, minimal flat cel-shading, warm muted earth tones, cinematic 16:9 framing".
 •   **Khử chữ triệt để:**
     "textless, strictly NO text, NO words, NO letters, NO numbers, pure illustration".
 •   **Cấu trúc Master Template cho "image_prompt":**
-    @mink, [Góc máy & Hành động đời thường], straight unsmiling neutral deadpan mouth, indifferent blank gaze, [Chi tiết bối cảnh & Đạo cụ sinh hoạt], [Ánh sáng & Màu sắc ấm pastel], Korean slice-of-life 2D webtoon art style, clean crisp black outlines, minimal flat cel-shading, warm muted pastel tones, cinematic composition, textless --ar 16:9
+    @mink, [Hành động đời thường & Tương tác đôi tay đa dạng: cầm tách trà, lật sách, rót cà phê, chống cằm, thả lỏng trên sofa], [Góc máy & Hướng nhìn tự nhiên: góc nghiêng nhìn ra cửa sổ, nhìn xuống sách/tách nước, góc nhìn sau lưng ngắm cảnh], straight unsmiling neutral deadpan mouth, calm unbothered expression, [Chi tiết bối cảnh & Đạo cụ sinh hoạt], [Ánh sáng & Màu sắc ấm pastel], Korean slice-of-life 2D webtoon art style, clean crisp black outlines, minimal flat cel-shading, warm muted pastel tones, cinematic composition, textless --ar 16:9
 
 **INTELLIGENT PSYCHOLOGICAL CONTEXT MAPPING (TRÍ TUỆ CHUYỂN HÓA LỜI THOẠI TÂM LÝ):**
 Mink là nhân vật dành riêng cho chủ đề tâm lý, triết lý sống, sự cô đơn tích cực (solitude), buông bỏ áp lực và tự chữa lành:
-1. Khi lời thoại bàn về áp lực xã hội, so sánh, tiêu dùng phô trương -> Mink đứng thản nhiên giữa cửa hàng xa xỉ phẩm xa hoa hoặc giơ chiếc điện thoại nứt màn hình 5 năm với vẻ mặt unbothered.
-2. Khi lời thoại bàn về giải tỏa áp lực, hủy hẹn, tự do một mình -> Mink nằm dài trên sofa thảnh thơi, gác chân, ngắm trần nhà trong nắng chiều vàng.
-3. Khi lời thoại bàn về sống chậm, hiện tại, chiêm nghiệm -> Mink pha cà phê drip sáng bên cửa sổ, đi dạo một mình lúc hoàng hôn, đọc sách đêm khuya bên đèn vintage, ăn mì một mình tại quầy gỗ ấm cúng, đứng trên tàu điện ngầm lúc tan tầm nhìn ánh đèn bokeh...
+1. Khi lời thoại bàn về áp lực xã hội, so sánh, tiêu dùng phô trương -> Mink đứng thản nhiên trước quầy kính xa hoa nhưng tay cầm cốc nước lọc bình dị, hoặc ngồi góc quán quen xoay nhẹ chiếc thìa cà phê với vẻ mặt unbothered.
+2. Khi lời thoại bàn về giải tỏa áp lực, hủy hẹn, tự do một mình -> Mink nằm dài trên sofa thảnh thơi, gác chân, ngắm trần nhà trong nắng chiều vàng hoặc ngâm chân nước ấm, hai tay thả lỏng buông xuôi êm ái.
+3. Khi lời thoại bàn về sống chậm, hiện tại, chiêm nghiệm -> Mink hai tay ôm tách cà phê drip sáng bên cửa sổ nhìn giọt sương, đi dạo một mình sau lưng lúc hoàng hôn ngắm ráng chiều, đọc sách đêm khuya tay lật trang giấy bên đèn vintage, ăn mì một mình tại quầy gỗ ấm cúng, tựa cằm vào cửa kính tàu điện ngầm lúc tan tầm ngắm bokeh...
 4. Luôn tôn vinh sự tương phản giữa thế giới ồn ào bên ngoài và sự bình an, tĩnh tại bên trong của Mink.` : `
 **CHARACTER / HUMAN REPRESENTATION IN 3D:**
 •   In 3D documentary style, humans appear primarily as **stylized 3D miniature architectural figurines** or silhouette scale-figures.
