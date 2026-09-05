@@ -1,6 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 
-export type Doc3DSubStyle = 'auto_dynamic' | string;
+export type Doc3DSubStyle = '' | 'auto_dynamic' | string;
 export type Doc3DRenderTheme = 'auto_dynamic' | 'clay_white' | 'realistic_materials' | 'dark_cyber_hud';
 export type SegmentMode = 'dynamic_grid_4_9' | 'dynamic_grid_468' | 'multi_prompt_line' | 'line' | 'duration';
 
@@ -47,7 +47,7 @@ export const getPromptCountForDuration = (seconds: number): number => {
 };
 
 const get3DStyleDescription = (
-  subStyle: Doc3DSubStyle = 'auto_dynamic', 
+  subStyle: Doc3DSubStyle = '', 
   theme: Doc3DRenderTheme = 'clay_white',
   customStylePrompt?: string
 ): string => {
@@ -78,7 +78,7 @@ const get3DStyleDescription = (
 
 const getSystemPrompt = (
   duration: number,
-  subStyle: Doc3DSubStyle = 'auto_dynamic',
+  subStyle: Doc3DSubStyle = '',
   theme: Doc3DRenderTheme = 'clay_white',
   includeCharactersPresent: boolean = false,
   includeCharactersAbsent: boolean = false,
@@ -513,7 +513,7 @@ export const generateStoryboardChunk = async (
   characterImage?: { data: string, mimeType: string } | null,
   previousContext?: ChunkContext | null,
   realEndTime?: string,
-  subStyle: Doc3DSubStyle = 'auto_dynamic',
+  subStyle: Doc3DSubStyle = '',
   theme: Doc3DRenderTheme = 'clay_white',
   isFirstChunk: boolean = false,
   segmentMode: SegmentMode = 'dynamic_grid_4_9',

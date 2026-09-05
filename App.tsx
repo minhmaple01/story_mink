@@ -120,7 +120,7 @@ const App: React.FC = () => {
   
   // 3D Specific Settings
   const [availableStyles, setAvailableStyles] = useState<VisualStyle[]>(() => getStoredStyles());
-  const [subStyle, setSubStyle] = useState<Doc3DSubStyle>('auto_dynamic');
+  const [subStyle, setSubStyle] = useState<Doc3DSubStyle>('');
   const [isStyleModalOpen, setIsStyleModalOpen] = useState<boolean>(false);
   const [editingStyle, setEditingStyle] = useState<VisualStyle | null>(null);
   const [renderTheme, setRenderTheme] = useState<Doc3DRenderTheme>('auto_dynamic');
@@ -148,7 +148,7 @@ const App: React.FC = () => {
       const updated = deleteCustomStyle(id);
       setAvailableStyles(updated);
       if (subStyle === id) {
-        setSubStyle('auto_dynamic');
+        setSubStyle('');
       }
     }
   };
@@ -159,8 +159,8 @@ const App: React.FC = () => {
     setIsStyleModalOpen(true);
   };
 
-  // Dropdown / Collapsible Expand States (Hidden by default, click to expand)
-  const [isStyleExpanded, setIsStyleExpanded] = useState<boolean>(false);
+  // Dropdown / Collapsible Expand States
+  const [isStyleExpanded, setIsStyleExpanded] = useState<boolean>(true);
   const [isThemeExpanded, setIsThemeExpanded] = useState<boolean>(false);
   const [isModeExpanded, setIsModeExpanded] = useState<boolean>(false);
   
@@ -260,7 +260,9 @@ const App: React.FC = () => {
     if (session.settings) {
       setSegmentMode(session.settings.segmentMode || 'dynamic_grid_468');
       setSegmentDuration(session.settings.segmentDuration || 10);
-      setSubStyle(session.settings.subStyle || 'auto_dynamic');
+      const restoredStyle = session.settings.subStyle || '';
+      setSubStyle(restoredStyle);
+      setIsStyleExpanded(!restoredStyle);
       setRenderTheme(session.settings.renderTheme || 'auto_dynamic');
       setAllowTextInImage(session.settings.allowTextInImage !== undefined ? session.settings.allowTextInImage : true);
       setIncludeMotion(session.settings.includeMotion !== undefined ? session.settings.includeMotion : true);
@@ -476,6 +478,12 @@ const App: React.FC = () => {
   };
 
   const handleGenerateChunk = async (chunkId: number): Promise<boolean> => {
+    if (!subStyle) {
+      alert("Vui lòng chọn một phong cách hình ảnh Storyboard trước khi tạo!");
+      setIsStyleExpanded(true);
+      return false;
+    }
+
     setFileChunks(prev => prev.map(c => 
       c.id === chunkId ? { ...c, status: 'loading' } : c
     ));
@@ -504,7 +512,7 @@ const App: React.FC = () => {
 
     try {
       const timeLabel = `${chunk.gridStart} - ${chunk.gridEnd}`;
-      const selectedStyleObj = availableStyles.find(s => s.id === subStyle) || availableStyles[0];
+      const selectedStyleObj = availableStyles.find(s => s.id === subStyle);
       const customStylePrompt = selectedStyleObj?.systemPromptGuidelines;
       
       const outputText = await generateStoryboardChunk(
@@ -643,6 +651,8 @@ const App: React.FC = () => {
     setCastList('');
     setReferenceImages([]);
     setActiveSessionId(null);
+    setSubStyle('');
+    setIsStyleExpanded(true);
   };
 
   const handleAnalyzeReferenceImages = async () => {
@@ -941,11 +951,29 @@ const App: React.FC = () => {
                   Phong cách hình ảnh Storyboard
                 </h3>
                 <span className="text-[11px] font-normal text-slate-400">
-                  {isStyleExpanded ? '(Nhấn để thu gọn)' : `(${availableStyles.length} style • Nhấn để đổi)`}
+                  {isStyleExpanded 
+                    ? '(Nhấn để thu gọn)' 
+                    : !subStyle 
+                      ? '(⚠️ Chưa chọn style • Nhấn để chọn)' 
+                      : `(${availableStyles.length} style • Nhấn để đổi)`}
                 </span>
               </button>
 
               <div className="flex items-center gap-2">
+                {subStyle && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSubStyle('');
+                    }}
+                    className="text-[11px] text-slate-500 hover:text-slate-800 underline px-1.5 py-0.5 rounded hover:bg-slate-100 transition-colors cursor-pointer"
+                    title="Bỏ chọn phong cách"
+                  >
+                    Bỏ chọn
+                  </button>
+                )}
+
                 <button
                   type="button"
                   onClick={() => {
@@ -965,7 +993,7 @@ const App: React.FC = () => {
                   className="flex items-center gap-1 text-xs font-medium text-slate-600 hover:text-slate-900 px-2 py-1 rounded bg-slate-100/80 hover:bg-slate-200/80 transition-colors cursor-pointer"
                 >
                   <span className="text-[11px]">
-                    {isStyleExpanded ? 'Thu gọn' : 'Đổi phong cách'}
+                    {isStyleExpanded ? 'Thu gọn' : (subStyle ? 'Đổi phong cách' : 'Chọn phong cách')}
                   </span>
                   {isStyleExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
                 </button>
@@ -976,18 +1004,34 @@ const App: React.FC = () => {
             {!isStyleExpanded && (
               <div 
                 onClick={() => setIsStyleExpanded(true)}
-                className="mt-2.5 flex items-center justify-between p-3 rounded-lg border border-slate-900 bg-slate-900 text-white cursor-pointer hover:bg-slate-800 transition-all shadow-xs"
+                className={`mt-2.5 flex items-center justify-between p-3 rounded-lg border transition-all shadow-xs cursor-pointer ${
+                  !subStyle 
+                    ? 'border-dashed border-amber-300 bg-amber-50/90 hover:bg-amber-100/90 text-amber-950'
+                    : 'border-slate-900 bg-slate-900 text-white hover:bg-slate-800'
+                }`}
               >
                 <div className="flex items-center gap-2.5">
-                  <div className="w-6 h-6 rounded bg-cyan-500/20 text-cyan-300 flex items-center justify-center shrink-0 border border-cyan-500/30">
+                  <div className={`w-6 h-6 rounded flex items-center justify-center shrink-0 border ${
+                    !subStyle
+                      ? 'bg-amber-100 text-amber-800 border-amber-300'
+                      : 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30'
+                  }`}>
                     <Sparkles size={14} />
                   </div>
                   <div>
                     {(() => {
-                      const currentOpt = availableStyles.find(o => o.id === subStyle) || availableStyles[0];
+                      if (!subStyle) {
+                        return (
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-xs text-amber-950">Chưa chọn phong cách hình ảnh storyboard</span>
+                            <span className="text-[11px] text-amber-800 hidden md:inline ml-1">• Nhấn vào đây để chọn phong cách phù hợp</span>
+                          </div>
+                        );
+                      }
+                      const currentOpt = availableStyles.find(o => o.id === subStyle);
                       return (
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-bold text-xs text-white">{currentOpt?.label}</span>
+                          <span className="font-bold text-xs text-white">{currentOpt?.label || subStyle}</span>
                           {currentOpt?.isDefault && (
                             <span className="text-[9px] bg-cyan-900/80 text-cyan-200 font-semibold px-1.5 py-0.2 rounded border border-cyan-700/50">
                               Hợp nhất Sa bàn, Mặt cắt & Bản đồ 3D
@@ -998,15 +1042,19 @@ const App: React.FC = () => {
                               Tùy chỉnh của bạn
                             </span>
                           )}
-                          <span className="text-[11px] text-slate-300 hidden md:inline ml-1">• {currentOpt?.desc}</span>
+                          {currentOpt?.desc && <span className="text-[11px] text-slate-300 hidden md:inline ml-1">• {currentOpt.desc}</span>}
                         </div>
                       );
                     })()}
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-[10px] text-cyan-300 font-medium bg-slate-800 px-2 py-0.5 rounded border border-slate-700">
-                    Đang chọn • Nhấn để xem danh sách
+                  <span className={`text-[10px] font-medium px-2 py-0.5 rounded border ${
+                    !subStyle 
+                      ? 'text-amber-900 bg-amber-200/90 border-amber-300 font-bold'
+                      : 'text-cyan-300 bg-slate-800 border-slate-700'
+                  }`}>
+                    {!subStyle ? '⚠️ Chưa chọn • Nhấn để chọn' : 'Đang chọn • Nhấn để xem danh sách'}
                   </span>
                 </div>
               </div>
@@ -1021,8 +1069,12 @@ const App: React.FC = () => {
                     <div
                       key={opt.id}
                       onClick={() => {
-                        setSubStyle(opt.id);
-                        setIsStyleExpanded(false);
+                        if (subStyle === opt.id) {
+                          setSubStyle('');
+                        } else {
+                          setSubStyle(opt.id);
+                          setIsStyleExpanded(false);
+                        }
                       }}
                       className={`group relative flex flex-col justify-between text-left transition-all rounded-lg border p-3 cursor-pointer ${
                         isSelected
