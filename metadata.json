@@ -1,0 +1,8 @@
+{
+  "name": "Remix Tạo ảnh Full",
+  "description": "Tạo visual storyboard và prompt ảnh chuyên sâu cho phong cách Tư liệu 3D, Sa bàn Isometric, Mặt cắt phân tầng và Bản đồ không gian từ file phụ đề SRT.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
