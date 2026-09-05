@@ -1233,8 +1233,8 @@ const App: React.FC = () => {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
-            {/* Left Column: File Upload & Generation Settings (4 cols) */}
-            <div className="md:col-span-4 flex flex-col gap-4">
+            {/* Left Column: File Upload & Generation Settings (3 cols - 25%) */}
+            <div className="col-span-12 md:col-span-3 flex flex-col gap-4">
               {/* Dropzone with SRT & Excel support */}
               <Dropzone 
                 onFileLoaded={handleFileLoaded} 
@@ -1486,8 +1486,8 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            {/* Middle Column: 3D Render Themes & Details (4 cols) */}
-            <div className="md:col-span-4 flex flex-col gap-4">
+            {/* Middle Column: 3D Render Themes & Details (3 cols - 25%) */}
+            <div className="col-span-12 md:col-span-3 flex flex-col gap-4">
               {/* 3D Render Theme */}
               <div className="bg-white p-3.5 rounded-lg border border-slate-200 shadow-xs flex flex-col gap-2.5">
                 <div className="flex items-center justify-between border-b border-slate-100 pb-2">
@@ -1676,8 +1676,8 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            {/* Right Column: Chunk List & Batch Generation (4 cols) */}
-            <div className="md:col-span-4 relative min-h-[400px] flex flex-col bg-white rounded-lg border border-slate-200 overflow-hidden shadow-xs">
+            {/* Right Column: Chunk List & Batch Generation (6 cols - 50%) */}
+            <div className="col-span-12 md:col-span-6 relative min-h-[400px] flex flex-col bg-white rounded-lg border border-slate-200 overflow-hidden shadow-xs">
               {fileChunks.length === 0 ? (
                 <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-slate-300">
                   <FileText className="w-8 h-8 mb-2 opacity-30 text-slate-400" />
@@ -1692,7 +1692,7 @@ const App: React.FC = () => {
                       <div className="flex flex-col">
                         <span className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
                           <FileText size={13} className="text-cyan-600"/> 
-                          <span className="truncate max-w-[180px]">{fileName}</span>
+                          <span className="truncate max-w-[320px]">{fileName}</span>
                         </span>
                         <div className="flex items-center gap-2 mt-0.5 text-[11px] font-medium text-slate-500">
                           <span>{fileChunks.length} Phần</span>
