@@ -46,6 +46,28 @@ export const getPromptCountForDuration = (seconds: number): number => {
   return Math.max(1, Math.ceil(seconds / 4));
 };
 
+export async function callWithRetry<T>(fn: () => Promise<T>, maxRetries = 3, baseDelayMs = 1500): Promise<T> {
+  let attempt = 0;
+  while (true) {
+    try {
+      return await fn();
+    } catch (err: any) {
+      attempt++;
+      const errorMessage = err?.message || String(err);
+      const isRateLimit = errorMessage.includes('429') || errorMessage.includes('RESOURCE_EXHAUSTED') || errorMessage.includes('Quota') || errorMessage.includes('rate limit');
+      const isTransient = errorMessage.includes('503') || errorMessage.includes('500') || errorMessage.includes('overloaded') || errorMessage.includes('fetch failed');
+      
+      if (attempt <= maxRetries && (isRateLimit || isTransient)) {
+        const delay = baseDelayMs * Math.pow(2, attempt - 1) + Math.random() * 800;
+        console.warn(`[Gemini API] Request throttled/failed (${errorMessage}). Thử lại lần ${attempt}/${maxRetries} sau ${Math.round(delay)}ms...`);
+        await new Promise(res => setTimeout(res, delay));
+        continue;
+      }
+      throw err;
+    }
+  }
+}
+
 const get3DStyleDescription = (
   subStyle: Doc3DSubStyle = 'mink_psychology', 
   theme: Doc3DRenderTheme = 'clay_white',
@@ -677,7 +699,7 @@ export const generateStoryboardChunk = async (
   }
 
   try {
-    const response = await ai.models.generateContent({
+    const response = await callWithRetry(() => ai.models.generateContent({
       model: 'gemini-3.7-flash', 
       contents: [
         { role: 'user', parts: parts }
@@ -685,7 +707,7 @@ export const generateStoryboardChunk = async (
       config: {
         thinkingConfig: { thinkingBudget: 4096 },
       }
-    });
+    }));
 
     return response.text || "";
   } catch (error) {

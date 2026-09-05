@@ -67,7 +67,10 @@ import {
   Search,
   Plus,
   Edit3,
-  Palette
+  Palette,
+  Square,
+  Zap,
+  AlertCircle
 } from 'lucide-react';
 
 export interface ChunkState extends SRTChunk {
@@ -166,6 +169,10 @@ const App: React.FC = () => {
   
   const [rawFileContent, setRawFileContent] = useState<string | null>(null);
   const [isBulkProcessing, setIsBulkProcessing] = useState(false);
+  const [concurrency, setConcurrency] = useState<number>(3);
+  const cancelBulkRef = useRef<boolean>(false);
+  const [bulkProgress, setBulkProgress] = useState<{ total: number; completed: number; running: number; failed: number } | null>(null);
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [isAnalyzingCast, setIsAnalyzingCast] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
   const [excludeAbsent, setExcludeAbsent] = useState(false);
@@ -477,6 +484,38 @@ const App: React.FC = () => {
     }
   };
 
+  const triggerDebouncedAutoSave = () => {
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+    autoSaveTimerRef.current = setTimeout(() => {
+      const current = fileChunksRef.current;
+      if (current.length === 0) return;
+      const saved = saveSessionToStorage({
+        id: activeSessionId || undefined,
+        fileName: fileName || 'Kịch bản 3D',
+        fileChunks: current,
+        referenceImages,
+        rawFileContent,
+        settings: {
+          segmentMode,
+          segmentDuration,
+          subStyle,
+          renderTheme,
+          allowTextInImage,
+          includeMotion,
+          includeCharactersPresent,
+          includeCharactersAbsent,
+          castList,
+          allowLongerPacingFromPart3,
+          boostShortScenesPart1
+        }
+      });
+      setActiveSessionId(saved.id);
+      setSavedSessions(getSavedSessions());
+    }, 350);
+  };
+
   const handleGenerateChunk = async (chunkId: number): Promise<boolean> => {
     if (!subStyle) {
       alert("Vui lòng chọn một phong cách hình ảnh Storyboard trước khi tạo!");
@@ -484,9 +523,13 @@ const App: React.FC = () => {
       return false;
     }
 
-    setFileChunks(prev => prev.map(c => 
-      c.id === chunkId ? { ...c, status: 'loading' } : c
-    ));
+    setFileChunks(prev => {
+      const next = prev.map(c => 
+        c.id === chunkId ? { ...c, status: 'loading' as const, errorMessage: undefined } : c
+      );
+      fileChunksRef.current = next;
+      return next;
+    });
 
     const currentChunks = fileChunksRef.current;
     const chunk = currentChunks.find(c => c.id === chunkId);
@@ -494,7 +537,7 @@ const App: React.FC = () => {
 
     let previousContext = null;
     if (chunkId > 0) {
-      const prevChunk = currentChunks.find(c => c.id === chunkId - 1);
+      const prevChunk = fileChunksRef.current.find(c => c.id === chunkId - 1);
       if (prevChunk && prevChunk.status === 'success' && prevChunk.results.length > 0) {
         const lastSegment = prevChunk.results[prevChunk.results.length - 1];
         if (lastSegment && lastSegment.jsonContent) {
@@ -583,65 +626,101 @@ const App: React.FC = () => {
         throw new Error(`Thiếu prompt: Cần ${expectedSegments} cảnh nhưng chỉ tạo được ${parsed.length}.`);
       }
 
-      setFileChunks(prev => prev.map(c => 
-        c.id === chunkId ? { ...c, status: 'success', results: parsed, errorMessage: undefined } : c
-      ));
-
-      // Auto-save after successful chunk generation
-      setTimeout(() => {
-        const updatedChunks = fileChunksRef.current.map(c => 
+      setFileChunks(prev => {
+        const next = prev.map(c => 
           c.id === chunkId ? { ...c, status: 'success' as const, results: parsed, errorMessage: undefined } : c
         );
-        const saved = saveSessionToStorage({
-          id: activeSessionId || undefined,
-          fileName: fileName || 'Kịch bản 3D',
-          fileChunks: updatedChunks,
-          referenceImages,
-          rawFileContent,
-          settings: {
-            segmentMode,
-            segmentDuration,
-            subStyle,
-            renderTheme,
-            allowTextInImage,
-            includeMotion,
-            includeCharactersPresent,
-            includeCharactersAbsent,
-            castList,
-            allowLongerPacingFromPart3,
-            boostShortScenesPart1
-          }
-        });
-        setActiveSessionId(saved.id);
-        setSavedSessions(getSavedSessions());
-      }, 100);
+        fileChunksRef.current = next;
+        return next;
+      });
 
+      triggerDebouncedAutoSave();
       return true;
 
     } catch (error: any) {
       console.error(error);
-      setFileChunks(prev => prev.map(c => 
-        c.id === chunkId ? { ...c, status: 'error', errorMessage: error.message || "Lỗi xử lý 3D" } : c
-      ));
+      setFileChunks(prev => {
+        const next = prev.map(c => 
+          c.id === chunkId ? { ...c, status: 'error' as const, errorMessage: error.message || "Lỗi xử lý 3D" } : c
+        );
+        fileChunksRef.current = next;
+        return next;
+      });
       return false;
     }
   };
 
-  const handleGenerateAll = async () => {
-    const pendingChunks = fileChunks.filter(c => c.status === 'idle' || c.status === 'error');
-    if (pendingChunks.length === 0) return;
-
-    setIsBulkProcessing(true);
-
-    for (const chunk of pendingChunks) {
-      const success = await handleGenerateChunk(chunk.id);
-      if (!success) {
-        alert(`Quá trình tạo dừng lại vì Phần ${chunk.id + 1} gặp sự cố.`);
-        break;
-      }
+  const handleGenerateBatch = async (chunkList: ChunkState[]) => {
+    if (!subStyle) {
+      alert("Vui lòng chọn một phong cách hình ảnh Storyboard trước khi tạo!");
+      setIsStyleExpanded(true);
+      return;
     }
 
+    if (chunkList.length === 0) return;
+
+    setIsBulkProcessing(true);
+    cancelBulkRef.current = false;
+
+    const total = chunkList.length;
+    let completed = 0;
+    let failed = 0;
+    let running = 0;
+
+    setBulkProgress({ total, completed: 0, running: 0, failed: 0 });
+
+    const queue = [...chunkList.map(c => c.id)];
+    const activeWorkers = Math.min(concurrency, queue.length);
+
+    const runWorker = async () => {
+      while (queue.length > 0 && !cancelBulkRef.current) {
+        const nextId = queue.shift();
+        if (nextId === undefined) break;
+
+        running++;
+        setBulkProgress(prev => prev ? { ...prev, running } : null);
+
+        const success = await handleGenerateChunk(nextId);
+
+        running--;
+        if (success) {
+          completed++;
+        } else {
+          failed++;
+        }
+        setBulkProgress(prev => prev ? { ...prev, completed, failed, running } : null);
+      }
+    };
+
+    const workers = Array.from({ length: activeWorkers }, () => runWorker());
+    await Promise.all(workers);
+
     setIsBulkProcessing(false);
+    setBulkProgress(null);
+    triggerDebouncedAutoSave();
+
+    if (cancelBulkRef.current) {
+      showNotice("Đã dừng tiến trình tạo các phần còn lại.");
+    } else if (failed > 0) {
+      showNotice(`Đã hoàn tất ${completed}/${total} phần (${failed} phần gặp sự cố, bạn có thể nhấn Thử lại).`);
+    } else {
+      showNotice(`🎉 Đã hoàn tất toàn bộ ${completed} phần thành công!`);
+    }
+  };
+
+  const handleGenerateAll = () => {
+    const pendingChunks = fileChunksRef.current.filter(c => c.status === 'idle' || c.status === 'error');
+    handleGenerateBatch(pendingChunks);
+  };
+
+  const handleRetryFailed = () => {
+    const failedChunks = fileChunksRef.current.filter(c => c.status === 'error');
+    handleGenerateBatch(failedChunks);
+  };
+
+  const handleCancelBulk = () => {
+    cancelBulkRef.current = true;
+    showNotice("Đang dừng các phần còn lại trong hàng đợi...");
   };
 
   const handleClear = () => {
@@ -828,6 +907,8 @@ const App: React.FC = () => {
   };
 
   const pendingCount = fileChunks.filter(c => c.status === 'idle' || c.status === 'error').length;
+  const errorCount = fileChunks.filter(c => c.status === 'error').length;
+  const runningCount = fileChunks.filter(c => c.status === 'loading').length;
   const generatedCount = allSegments.length;
 
   return (
@@ -1606,125 +1687,226 @@ const App: React.FC = () => {
               ) : (
                 <div className="flex flex-col divide-y divide-slate-100 max-h-[640px] overflow-y-auto custom-scrollbar h-full">
                   {/* Header Bar */}
-                  <div className="bg-slate-50/90 px-3.5 py-2.5 border-b border-slate-200 shadow-xs sticky top-0 z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                    <div className="flex flex-col">
-                      <span className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
-                        <FileText size={13} className="text-cyan-600"/> 
-                        <span className="truncate max-w-[180px]">{fileName}</span>
-                      </span>
-                      <div className="flex items-center gap-2 mt-0.5 text-[11px] font-medium text-slate-500">
-                        <span>{fileChunks.length} Phần</span>
-                        <span>•</span>
-                        <span>Ước tính: <strong className="text-slate-800">{estimatedTotalPrompts}</strong> prompt</span>
-                        <span>•</span>
-                        <span>Đã xong: <strong className="text-emerald-700">{generatedCount}</strong></span>
+                  <div className="bg-slate-50/95 px-3.5 py-2.5 border-b border-slate-200 shadow-xs sticky top-0 z-10 flex flex-col gap-2">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                      <div className="flex flex-col">
+                        <span className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
+                          <FileText size={13} className="text-cyan-600"/> 
+                          <span className="truncate max-w-[180px]">{fileName}</span>
+                        </span>
+                        <div className="flex items-center gap-2 mt-0.5 text-[11px] font-medium text-slate-500">
+                          <span>{fileChunks.length} Phần</span>
+                          <span>•</span>
+                          <span>Ước tính: <strong className="text-slate-800">{estimatedTotalPrompts}</strong> prompt</span>
+                          <span>•</span>
+                          <span>Đã xong: <strong className="text-emerald-700">{generatedCount}</strong></span>
+                        </div>
+                      </div>
+
+                      {/* Controls: Concurrency & Action buttons */}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {/* Concurrency Selector */}
+                        <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-md border border-slate-200 shadow-2xs">
+                          <span className="text-[11px] font-semibold text-slate-600 flex items-center gap-1">
+                            <Zap size={12} className="text-amber-500 fill-amber-500" />
+                            Song song:
+                          </span>
+                          {[1, 2, 3, 4, 5].map((num) => (
+                            <button
+                              key={num}
+                              type="button"
+                              disabled={isBulkProcessing}
+                              onClick={() => setConcurrency(num)}
+                              className={`px-1.5 py-0.5 text-[10px] font-bold rounded transition-all ${
+                                concurrency === num
+                                  ? 'bg-cyan-600 text-white shadow-2xs'
+                                  : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                              } ${isBulkProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                              title={num === 1 ? 'Chạy tuần tự từng phần' : num === 3 ? 'Chạy 3 phần cùng lúc (Khuyên dùng - nhanh & ổn định)' : `Chạy ${num} phần cùng lúc`}
+                            >
+                              {num}{num === 3 ? '★' : ''}
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Batch buttons */}
+                        {isBulkProcessing ? (
+                          <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold bg-cyan-600 text-white shadow-xs">
+                              <Loader2 size={12} className="animate-spin" />
+                              <span>Đang chạy {bulkProgress?.running || runningCount} phần...</span>
+                            </div>
+                            <button
+                              onClick={handleCancelBulk}
+                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition-all active:scale-95 shadow-2xs"
+                              title="Dừng các phần còn lại trong hàng đợi"
+                            >
+                              <Square size={11} fill="currentColor" />
+                              <span>Dừng</span>
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5">
+                            {errorCount > 0 && (
+                              <button
+                                onClick={handleRetryFailed}
+                                className="flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-300 transition-all active:scale-95 shadow-2xs"
+                                title="Tạo lại các phần bị lỗi"
+                              >
+                                <RotateCcw size={11} />
+                                <span>Thử lại ({errorCount})</span>
+                              </button>
+                            )}
+                            {pendingCount > 0 && (
+                              <button 
+                                onClick={handleGenerateAll}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 active:scale-95 transition-all shadow-xs"
+                                title={`Chạy song song ${concurrency} phần cùng lúc`}
+                              >
+                                <Play size={11} fill="currentColor" />
+                                <span>Tạo tất cả ({pendingCount})</span>
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      {pendingCount > 0 && (
-                        <button 
-                          onClick={handleGenerateAll}
-                          disabled={isBulkProcessing}
-                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold text-white transition-all shadow-xs
-                            ${isBulkProcessing 
-                              ? 'bg-slate-400 cursor-not-allowed' 
-                              : 'bg-slate-900 hover:bg-slate-800 active:scale-95'
-                            }`}
-                        >
-                          {isBulkProcessing ? (
-                            <>
-                              <Loader2 size={12} className="animate-spin" />
-                              Đang xử lý 3D...
-                            </>
-                          ) : (
-                            <>
-                              <Play size={11} fill="currentColor" />
-                              Tạo tất cả ({pendingCount})
-                            </>
-                          )}
-                        </button>
-                      )}
-                    </div>
+                    {/* Active Bulk Progress Bar */}
+                    {isBulkProcessing && bulkProgress && (
+                      <div className="bg-cyan-50/80 rounded-md p-2 border border-cyan-200/70 flex flex-col gap-1.5">
+                        <div className="flex items-center justify-between text-[11px] font-semibold text-cyan-950">
+                          <span className="flex items-center gap-1.5">
+                            <span className="relative flex h-2 w-2">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
+                            </span>
+                            Đang xử lý song song {concurrency} luồng: {bulkProgress.completed + bulkProgress.failed}/{bulkProgress.total} hoàn tất
+                          </span>
+                          <span className="text-[10px] text-cyan-700 font-mono">
+                            Đang chạy: {bulkProgress.running} | Chờ: {Math.max(0, bulkProgress.total - (bulkProgress.completed + bulkProgress.failed + bulkProgress.running))} {bulkProgress.failed > 0 && `| Lỗi: ${bulkProgress.failed}`}
+                          </span>
+                        </div>
+                        <div className="w-full bg-cyan-200/60 rounded-full h-1.5 overflow-hidden">
+                          <div 
+                            className="bg-cyan-600 h-1.5 rounded-full transition-all duration-300 ease-out"
+                            style={{ width: `${Math.min(100, Math.round(((bulkProgress.completed + bulkProgress.failed) / Math.max(1, bulkProgress.total)) * 100))}%` }}
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Chunk items */}
-                  {fileChunks.map((chunk) => (
-                    <div key={chunk.id} className="p-3 flex flex-col hover:bg-slate-50 transition-colors group">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex flex-col gap-0.5">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="text-xs font-bold text-slate-800">Phần {chunk.id + 1}</span>
-                            <span className="text-[10px] font-mono bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded border border-slate-200">
-                              {chunk.startTime} - {chunk.endTime}
+                  {fileChunks.map((chunk) => {
+                    const isLoading = chunk.status === 'loading';
+                    const isQueued = isBulkProcessing && chunk.status === 'idle';
+                    return (
+                      <div 
+                        key={chunk.id} 
+                        className={`p-3 flex flex-col transition-all group ${
+                          isLoading 
+                            ? 'bg-cyan-50/60 border-l-4 border-l-cyan-500 ring-1 ring-cyan-200 shadow-2xs' 
+                            : chunk.status === 'error'
+                              ? 'bg-rose-50/30 border-l-4 border-l-rose-400'
+                              : 'hover:bg-slate-50'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex flex-col gap-0.5">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-xs font-bold text-slate-800">Phần {chunk.id + 1}</span>
+                              <span className="text-[10px] font-mono bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded border border-slate-200">
+                                {chunk.startTime} - {chunk.endTime}
+                              </span>
+                              {isLoading && (
+                                <span className="text-[9px] font-bold bg-cyan-100 text-cyan-800 px-1.5 py-0.2 rounded border border-cyan-200 flex items-center gap-1 animate-pulse">
+                                  <Loader2 size={10} className="animate-spin" /> Đang tạo song song...
+                                </span>
+                              )}
+                              {isQueued && (
+                                <span className="text-[9px] font-medium bg-amber-50 text-amber-700 px-1.5 py-0.2 rounded border border-amber-200">
+                                  ⏳ Trong hàng đợi
+                                </span>
+                              )}
+                              {(segmentMode === 'dynamic_grid_4_9' || segmentMode === 'dynamic_grid_468') && allowLongerPacingFromPart3 && (
+                                chunk.id === 0 && boostShortScenesPart1 ? (
+                                  <span className="text-[9px] font-bold bg-amber-100 text-amber-900 px-1.5 py-0.2 rounded border border-amber-200 flex items-center gap-0.5">
+                                    ⚡ P1: Nhiều cảnh ngắn (3.5s - 6s)
+                                  </span>
+                                ) : chunk.id === 1 ? (
+                                  <span className="text-[9px] font-medium bg-cyan-100 text-cyan-800 px-1.5 py-0.2 rounded border border-cyan-200">
+                                    P2: Chuyển tiếp 4s - 8s
+                                  </span>
+                                ) : chunk.id >= 2 ? (
+                                  <span className="text-[9px] font-bold bg-violet-100 text-violet-800 px-1.5 py-0.2 rounded border border-violet-200">
+                                    Lưới 8s - 14s
+                                  </span>
+                                ) : (
+                                  <span className="text-[9px] font-medium bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded border border-slate-200">
+                                    Lưới 4s - 9s
+                                  </span>
+                                )
+                              )}
+                            </div>
+                            <span className="text-[10px] text-slate-400 font-mono">
+                              Khung lưới: {chunk.gridStart} - {chunk.gridEnd}
                             </span>
-                            {(segmentMode === 'dynamic_grid_4_9' || segmentMode === 'dynamic_grid_468') && allowLongerPacingFromPart3 && (
-                              chunk.id === 0 && boostShortScenesPart1 ? (
-                                <span className="text-[9px] font-bold bg-amber-100 text-amber-900 px-1.5 py-0.2 rounded border border-amber-200 flex items-center gap-0.5">
-                                  ⚡ P1: Nhiều cảnh ngắn (3.5s - 6s)
-                                </span>
-                              ) : chunk.id === 1 ? (
-                                <span className="text-[9px] font-medium bg-cyan-100 text-cyan-800 px-1.5 py-0.2 rounded border border-cyan-200">
-                                  P2: Chuyển tiếp 4s - 8s
-                                </span>
-                              ) : chunk.id >= 2 ? (
-                                <span className="text-[9px] font-bold bg-violet-100 text-violet-800 px-1.5 py-0.2 rounded border border-violet-200">
-                                  Lưới 8s - 14s
-                                </span>
-                              ) : (
-                                <span className="text-[9px] font-medium bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded border border-slate-200">
-                                  Lưới 4s - 9s
-                                </span>
-                              )
-                            )}
                           </div>
-                          <span className="text-[10px] text-slate-400 font-mono">
-                            Khung lưới: {chunk.gridStart} - {chunk.gridEnd}
-                          </span>
-                        </div>
-                        
-                        <div className="flex items-center gap-2">
-                          {chunk.status === 'success' && (
-                            <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full flex items-center gap-1 border border-emerald-200">
-                              <CheckCircle2 size={12} /> {chunk.results.length} prompt
-                            </span>
-                          )}
                           
-                          <button
-                            onClick={() => handleGenerateChunk(chunk.id)}
-                            disabled={chunk.status === 'loading' || isBulkProcessing}
-                            className={`
-                              flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-bold transition-all
-                              ${chunk.status === 'success' 
-                                ? 'bg-white border border-slate-200 text-slate-600 hover:text-cyan-700 hover:border-cyan-300 hover:bg-cyan-50' 
-                                : 'bg-slate-900 text-white hover:bg-slate-800 active:scale-95 shadow-xs'
-                              }
-                              ${(chunk.status === 'loading' || isBulkProcessing) ? 'bg-slate-300 text-slate-600 cursor-not-allowed opacity-80' : ''}
-                            `}
-                          >
-                            {chunk.status === 'loading' ? (
-                              <>
-                                <Loader2 size={12} className="animate-spin" /> Đang tạo
-                              </>
-                            ) : chunk.status === 'success' ? (
-                              <>
-                                <RotateCcw size={12} /> Tạo lại
-                              </>
-                            ) : (
-                              <>
-                                <PlayCircle size={12} /> Tạo 3D
-                              </>
+                          <div className="flex items-center gap-2">
+                            {chunk.status === 'success' && (
+                              <span className="text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full flex items-center gap-1 border border-emerald-200">
+                                <CheckCircle2 size={12} /> {chunk.results.length} prompt
+                              </span>
                             )}
-                          </button>
+                            
+                            <button
+                              onClick={() => handleGenerateChunk(chunk.id)}
+                              disabled={isLoading || isBulkProcessing}
+                              className={`
+                                flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-bold transition-all
+                                ${chunk.status === 'success' 
+                                  ? 'bg-white border border-slate-200 text-slate-600 hover:text-cyan-700 hover:border-cyan-300 hover:bg-cyan-50' 
+                                  : 'bg-slate-900 text-white hover:bg-slate-800 active:scale-95 shadow-xs'
+                                }
+                                ${(isLoading || isBulkProcessing) ? 'bg-slate-300 text-slate-600 cursor-not-allowed opacity-80' : ''}
+                              `}
+                            >
+                              {isLoading ? (
+                                <>
+                                  <Loader2 size={12} className="animate-spin" /> Đang tạo
+                                </>
+                              ) : chunk.status === 'success' ? (
+                                <>
+                                  <RotateCcw size={12} /> Tạo lại
+                                </>
+                              ) : (
+                                <>
+                                  <PlayCircle size={12} /> Tạo 3D
+                                </>
+                              )}
+                            </button>
+                          </div>
                         </div>
+                        {chunk.status === 'error' && chunk.errorMessage && (
+                          <div className="mt-2 text-[11px] text-rose-700 bg-rose-50 p-2 rounded border border-rose-200 flex items-center justify-between gap-2">
+                            <div className="flex items-center gap-1.5">
+                              <AlertCircle size={13} className="shrink-0 text-rose-500" />
+                              <span>{chunk.errorMessage}</span>
+                            </div>
+                            <button
+                              onClick={() => handleGenerateChunk(chunk.id)}
+                              disabled={isBulkProcessing}
+                              className="px-2 py-0.5 text-[10px] font-bold bg-white border border-rose-300 text-rose-800 rounded hover:bg-rose-100 transition-colors shrink-0"
+                            >
+                              Thử lại phần này
+                            </button>
+                          </div>
+                        )}
                       </div>
-                      {chunk.status === 'error' && chunk.errorMessage && (
-                        <div className="mt-2 text-[11px] text-red-600 bg-red-50 p-2 rounded border border-red-200">
-                          {chunk.errorMessage}
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </div>
